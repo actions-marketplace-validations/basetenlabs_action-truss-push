@@ -1,0 +1,75 @@
+name: "Truss Push"
+description: "Deploy and validate a Truss model on Baseten"
+
+inputs:
+  truss-directory:
+    description: "Path to directory containing config.yaml (e.g., llm/gpt-oss-20b/latency, video/model-name/quality)"
+    required: true
+  baseten-api-key:
+    description: "Baseten API key (from secrets)"
+    required: true
+  promote:
+    description: "Whether to promote the deployment to production after validation"
+    required: false
+    default: "false"
+  cleanup:
+    description: "Whether to deactivate the deployment after validation"
+    required: false
+    default: "true"
+  predict-payload:
+    description: "JSON override for predict payload. If empty, reads model_metadata.example_model_input from config.yaml"
+    required: false
+    default: ""
+  deploy-timeout:
+    description: "Max seconds to wait for deployment to become active (45 min default for TRT-LLM builds)"
+    required: false
+    default: "2700"
+  predict-timeout:
+    description: "Timeout in seconds for predict request"
+    required: false
+    default: "300"
+
+outputs:
+  deployment-id:
+    description: "Baseten deployment ID"
+    value: ${{ steps.deploy.outputs.deployment-id }}
+  model-id:
+    description: "Baseten model ID"
+    value: ${{ steps.deploy.outputs.model-id }}
+  model-name:
+    description: "Model name from config.yaml"
+    value: ${{ steps.deploy.outputs.model-name }}
+  deploy-time-seconds:
+    description: "Wall-clock seconds from push to active"
+    value: ${{ steps.deploy.outputs.deploy-time-seconds }}
+  predict-response:
+    description: "Response from predict call (truncated to 4KB)"
+    value: ${{ steps.deploy.outputs.predict-response }}
+  status:
+    description: "One of: success, deploy_failed, deploy_timeout, predict_failed, cleanup_failed"
+    value: ${{ steps.deploy.outputs.status }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install dependencies
+      shell: bash
+      run: pip install -q truss requests pyyaml
+
+    - name: Deploy and validate
+      id: deploy
+      shell: bash
+      env:
+        TRUSS_DIRECTORY: ${{ inputs.truss-directory }}
+        BASETEN_API_KEY: ${{ inputs.baseten-api-key }}
+        PROMOTE: ${{ inputs.promote }}
+        CLEANUP: ${{ inputs.cleanup }}
+        PREDICT_PAYLOAD: ${{ inputs.predict-payload }}
+        DEPLOY_TIMEOUT: ${{ inputs.deploy-timeout }}
+        PREDICT_TIMEOUT: ${{ inputs.predict-timeout }}
+      run: python ${{ github.action_path }}/src/main.py
