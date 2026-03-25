@@ -25,33 +25,63 @@ This action deploys a [Truss](https://github.com/basetenlabs/truss) model to [Ba
     # Required
     baseten-api-key: ""
 
+    # Override the model name (maps to truss push --model-name)
+    # Default: '' (uses model_name from config.yaml)
+    model-name: ""
+
     # Whether to promote the deployment to production after validation
     # Default: false
     promote: ""
 
+    # Deploy to a specific environment (implies publish, ignores promote)
+    # Default: '' (no environment)
+    environment: ""
+
+    # Preserve previous production deployment's autoscaling setting
+    # Only meaningful with promote: true
+    # Default: false
+    preserve-previous-production-deployment: ""
+
+    # Attach git versioning info (sha, branch, tag) to the deployment
+    # Default: true
+    include-git-info: ""
+
+    # JSON string of labels as key-value pairs
+    # Default: ''
+    labels: ""
+
+    # Name of the deployment. Defaults to 'PR-<number>_<sha>' on pull
+    # requests or '<sha>' otherwise
+    # Default: '' (auto-generated)
+    deployment-name: ""
+
     # Whether to deactivate the deployment after validation
     # Default: true
     cleanup: ""
-
-    # Max seconds to wait for deployment to become active
-    # Default: 2700
-    deploy-timeout: ""
 
     # JSON override for predict payload. If empty, reads
     # model_metadata.example_model_input from config.yaml
     # Default: ''
     predict-payload: ""
 
+    # Max minutes to wait for deployment to become active
+    # Default: 45
+    deploy-timeout-minutes: ""
+
     # Timeout in seconds for predict request
     # Default: 300
     predict-timeout: ""
 ```
+
+> **Note:** For multi-team organizations, configure the team in your `.trussrc` file. The action uses the team configured in `.trussrc` automatically.
 
 ## Scenarios
 
 - [Deploy a model and promote to production](#deploy-a-model-and-promote-to-production)
 - [Deploy a model without cleanup](#deploy-a-model-without-cleanup)
 - [Deploy with a custom predict payload](#deploy-with-a-custom-predict-payload)
+- [Deploy to a specific environment](#deploy-to-a-specific-environment)
+- [Deploy with labels](#deploy-with-labels)
 - [Run in CI on pull requests](#run-in-ci-on-pull-requests)
 - [Deploy multiple models](#deploy-multiple-models)
 
@@ -91,6 +121,31 @@ Override the example input defined in `config.yaml` with an inline JSON payload.
     baseten-api-key: ${{ secrets.BASETEN_API_KEY }}
     predict-payload: '{"prompt": "Hello, world!", "max_new_tokens": 128}'
     predict-timeout: 60
+```
+
+### Deploy to a specific environment
+
+Push to a named environment (e.g., staging). This implies publish and ignores the `promote` flag.
+
+```yaml
+- uses: basetenlabs/action-truss-push@v0.1.0
+  with:
+    truss-directory: "./my-model"
+    baseten-api-key: ${{ secrets.BASETEN_API_KEY }}
+    environment: "staging"
+    cleanup: false
+```
+
+### Deploy with labels
+
+Attach metadata labels to track deployments in your CI pipeline.
+
+```yaml
+- uses: basetenlabs/action-truss-push@v0.1.0
+  with:
+    truss-directory: "./my-model"
+    baseten-api-key: ${{ secrets.BASETEN_API_KEY }}
+    labels: '{"team": "ml-platform", "triggered-by": "ci"}'
 ```
 
 ### Run in CI on pull requests

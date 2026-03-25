@@ -12,10 +12,34 @@ inputs:
   baseten-api-key:
     description: "Baseten API key (from secrets)"
     required: true
+  model-name:
+    description: "Override the model name (maps to truss push --model-name)"
+    required: false
+    default: ""
   promote:
     description: "Whether to promote the deployment to production after validation"
     required: false
     default: "false"
+  environment:
+    description: "Deploy to a specific environment (implies publish, ignores promote)"
+    required: false
+    default: ""
+  preserve-previous-production-deployment:
+    description: "Preserve previous production deployment's autoscaling setting (only with promote: true)"
+    required: false
+    default: "false"
+  include-git-info:
+    description: "Attach git versioning info (sha, branch, tag) to the deployment"
+    required: false
+    default: "true"
+  labels:
+    description: "JSON string of labels as key-value pairs (e.g. '{\"team\": \"ml\", \"project\": \"llm\"}')"
+    required: false
+    default: ""
+  deployment-name:
+    description: "Name of the deployment. Defaults to 'PR-<number>_<sha>' on pull requests or '<sha>' otherwise"
+    required: false
+    default: ""
   cleanup:
     description: "Whether to deactivate the deployment after validation"
     required: false
@@ -24,10 +48,10 @@ inputs:
     description: "JSON override for predict payload. If empty, reads model_metadata.example_model_input from config.yaml"
     required: false
     default: ""
-  deploy-timeout:
-    description: "Max seconds to wait for deployment to become active (45 min default for TRT-LLM builds)"
+  deploy-timeout-minutes:
+    description: "Max minutes to wait for deployment to become active"
     required: false
-    default: "2700"
+    default: "45"
   predict-timeout:
     description: "Timeout in seconds for predict request"
     required: false
@@ -71,9 +95,15 @@ runs:
       env:
         TRUSS_DIRECTORY: ${{ inputs.truss-directory }}
         BASETEN_API_KEY: ${{ inputs.baseten-api-key }}
+        MODEL_NAME: ${{ inputs.model-name }}
         PROMOTE: ${{ inputs.promote }}
+        ENVIRONMENT: ${{ inputs.environment }}
+        PRESERVE_PREVIOUS_PRODUCTION_DEPLOYMENT: ${{ inputs.preserve-previous-production-deployment }}
+        INCLUDE_GIT_INFO: ${{ inputs.include-git-info }}
+        LABELS: ${{ inputs.labels }}
+        DEPLOYMENT_NAME: ${{ inputs.deployment-name }}
         CLEANUP: ${{ inputs.cleanup }}
         PREDICT_PAYLOAD: ${{ inputs.predict-payload }}
-        DEPLOY_TIMEOUT: ${{ inputs.deploy-timeout }}
+        DEPLOY_TIMEOUT_MINUTES: ${{ inputs.deploy-timeout-minutes }}
         PREDICT_TIMEOUT: ${{ inputs.predict-timeout }}
       run: python ${{ github.action_path }}/src/main.py
