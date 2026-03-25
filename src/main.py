@@ -52,11 +52,30 @@ def build_deployment_name():
     return short_sha
 
 
-def deploy(truss_directory, api_key, promote, deployment_name):
+def deploy(
+    truss_directory,
+    api_key,
+    promote,
+    deployment_name,
+    model_name=None,
+    environment=None,
+    preserve_previous_production_deployment=False,
+    include_git_info=False,
+    labels=None,
+    deploy_timeout_minutes=None,
+):
     truss.login(api_key)
     return truss.push(
-        truss_directory, publish=True, promote=promote,
+        truss_directory,
+        publish=True,
+        promote=promote,
         deployment_name=deployment_name,
+        model_name=model_name or None,
+        environment=environment or None,
+        preserve_previous_production_deployment=preserve_previous_production_deployment,
+        include_git_info=include_git_info,
+        labels=labels,
+        deploy_timeout_minutes=deploy_timeout_minutes,
     )
 
 
@@ -261,11 +280,25 @@ def write_summary(
 def main():
     truss_directory = os.environ["TRUSS_DIRECTORY"]
     api_key = os.environ["BASETEN_API_KEY"]
+    model_name_override = os.environ.get("MODEL_NAME", "").strip() or None
     should_promote = os.environ.get("PROMOTE", "false").lower() == "true"
-    deployment_name = build_deployment_name()
+    environment = os.environ.get("ENVIRONMENT", "").strip() or None
+    preserve_prev = (
+        os.environ.get("PRESERVE_PREVIOUS_PRODUCTION_DEPLOYMENT", "false").lower()
+        == "true"
+    )
+    include_git_info = (
+        os.environ.get("INCLUDE_GIT_INFO", "true").lower() == "true"
+    )
+    labels_raw = os.environ.get("LABELS", "").strip()
+    labels = json.loads(labels_raw) if labels_raw else None
+    deployment_name = os.environ.get("DEPLOYMENT_NAME", "").strip()
+    if not deployment_name:
+        deployment_name = build_deployment_name()
     should_cleanup = os.environ.get("CLEANUP", "false").lower() == "true"
     payload_override = os.environ.get("PREDICT_PAYLOAD", "").strip()
-    deploy_timeout = int(os.environ.get("DEPLOY_TIMEOUT", "2700"))
+    deploy_timeout_minutes = int(os.environ.get("DEPLOY_TIMEOUT_MINUTES", "45"))
+    deploy_timeout_seconds = deploy_timeout_minutes * 60
     predict_timeout = int(os.environ.get("PREDICT_TIMEOUT", "300"))
 
     status = "success"
@@ -291,8 +324,18 @@ def main():
         deploy_start = time.time()
         log_group(f"Deploy {model_name}")
         print(f"Deploying {model_name}...")
-        deployment = deploy(truss_directory, api_key,
-                            should_promote, deployment_name)
+        deployment = deploy(
+            truss_directory,
+            api_key,
+            should_promote,
+            deployment_name,
+            model_name=model_name_override,
+            environment=environment,
+            preserve_previous_production_deployment=preserve_prev,
+            include_git_info=include_git_info,
+            labels=labels,
+            deploy_timeout_minutes=deploy_timeout_minutes,
+        )
         deployment_id = deployment.model_deployment_id
         model_id = deployment.model_id
         print(f"Deployment ID: {deployment_id}")
@@ -302,10 +345,10 @@ def main():
         )
         log_endgroup()
 
-        log_group(f"Wait for active (timeout: {deploy_timeout}s)")
+        log_group(f"Wait for active (timeout: {deploy_timeout_minutes}m)")
         log_proc = start_log_stream(model_id, deployment_id)
         try:
-            deploy_time = wait_for_active(deployment, deploy_timeout)
+            deploy_time = wait_for_active(deployment, deploy_timeout_seconds)
         finally:
             stop_log_stream(log_proc)
         print(f"Deployment active in {deploy_time:.1f}s")

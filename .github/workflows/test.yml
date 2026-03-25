@@ -1,0 +1,44 @@
+name: Test Action
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-model:
+    name: Test model push
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./
+        with:
+          truss-directory: ".github/tests/model"
+          baseten-api-key: ${{ secrets.BASETEN_API_KEY }}
+          promote: false
+          cleanup: true
+          deploy-timeout-minutes: 45
+
+  test-chain:
+    name: Test chain push
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install truss
+        run: pip install -q truss
+
+      - name: Login to Baseten
+        run: truss login ${{ secrets.BASETEN_API_KEY }}
+
+      - name: Push chain
+        run: |
+          truss chains push \
+            .github/tests/chain/hello_chain.py \
+            --non-interactive \
+            --wait \
+            --deployment-name "test-${{ github.sha }}"
