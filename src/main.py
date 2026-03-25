@@ -30,7 +30,7 @@ PHASE_TO_STATUS = {
 CHAIN_FAILED_STATUSES = {
     "DEPLOY_FAILED", "BUILD_FAILED", "FAILED", "BUILD_STOPPED",
 }
-CHAIN_READY_STATUSES = {"ACTIVE", "SCALED_TO_ZERO"}
+CHAIN_READY_STATUSES = {"ACTIVE", "SCALED_TO_ZERO", "MODEL_READY"}
 
 
 # ---------------------------------------------------------------------------
