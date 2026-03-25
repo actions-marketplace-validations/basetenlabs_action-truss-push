@@ -30,6 +30,7 @@ PHASE_TO_STATUS = {
 CHAIN_FAILED_STATUSES = {
     "DEPLOY_FAILED", "BUILD_FAILED", "FAILED", "BUILD_STOPPED",
 }
+CHAIN_READY_STATUSES = {"ACTIVE", "SCALED_TO_ZERO"}
 
 
 # ---------------------------------------------------------------------------
@@ -281,13 +282,14 @@ def wait_for_chain_active(chain_service, timeout):
                 f"Chain deployment failed. Chainlet statuses: {statuses}"
             )
 
-        if all(s == "ACTIVE" for s in statuses.values()):
-            print(f"All chainlets active: {list(statuses.keys())}")
+        if all(s in CHAIN_READY_STATUSES for s in statuses.values()):
+            print(f"All chainlets ready: {statuses}", flush=True)
             return time.time() - start
 
         print(
             f"  Waiting for chain... ({elapsed:.0f}s) "
-            f"Statuses: {statuses}"
+            f"Statuses: {statuses}",
+            flush=True,
         )
         time.sleep(poll_interval)
 
