@@ -67,6 +67,7 @@ def deploy(
     truss.login(api_key)
     return truss.push(
         truss_directory,
+        publish=True,
         promote=promote,
         deployment_name=deployment_name,
         model_name=model_name or None,
