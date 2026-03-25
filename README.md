@@ -1,8 +1,12 @@
 # Truss Push Action
 
-This action deploys a [Truss](https://github.com/basetenlabs/truss) model to [Baseten](https://baseten.co). It pushes the model, waits for the deployment to become active, optionally validates it with a predict request, and promotes it to production.
+This action deploys a [Truss](https://github.com/basetenlabs/truss) model or [chain](https://docs.baseten.co/development/chain/deploy) to [Baseten](https://baseten.co). It pushes the deployment, waits for it to become active, optionally validates it with a predict request, and promotes it to production.
+
+**Models** are detected when `truss-directory` points to a directory containing `config.yaml`. **Chains** are detected when `truss-directory` points to a `.py` file containing a `@chains.mark_entrypoint` class.
 
 ## Usage
+
+### Model
 
 ```yaml
 - uses: basetenlabs/action-truss-push@v0.1.0
@@ -11,13 +15,23 @@ This action deploys a [Truss](https://github.com/basetenlabs/truss) model to [Ba
     baseten-api-key: ${{ secrets.BASETEN_API_KEY }}
 ```
 
+### Chain
+
+```yaml
+- uses: basetenlabs/action-truss-push@v0.1.0
+  with:
+    truss-directory: "./my_chain.py"
+    baseten-api-key: ${{ secrets.BASETEN_API_KEY }}
+    predict-payload: '{"max_value": 5}'
+```
+
 ## Inputs
 
 ```yaml
 - uses: basetenlabs/action-truss-push@v0.1.0
   with:
-    # Path to directory containing config.yaml
-    # (e.g., llm/gpt-oss-20b/latency, video/model-name/quality)
+    # Path to a model directory containing config.yaml,
+    # or a .py file for chain deployments
     # Required
     truss-directory: ""
 
@@ -25,8 +39,10 @@ This action deploys a [Truss](https://github.com/basetenlabs/truss) model to [Ba
     # Required
     baseten-api-key: ""
 
-    # Override the model name (maps to truss push --model-name)
-    # Default: '' (uses model_name from config.yaml)
+    # Override the model/chain name
+    # For models: maps to truss push --model-name
+    # For chains: sets the chain_name
+    # Default: '' (uses model_name from config.yaml, or entrypoint class name for chains)
     model-name: ""
 
     # Whether to promote the deployment to production after validation
@@ -59,8 +75,9 @@ This action deploys a [Truss](https://github.com/basetenlabs/truss) model to [Ba
     # Default: true
     cleanup: ""
 
-    # JSON override for predict payload. If empty, reads
-    # model_metadata.example_model_input from config.yaml
+    # JSON predict payload. For models, defaults to
+    # model_metadata.example_model_input from config.yaml.
+    # For chains, must be provided explicitly.
     # Default: ''
     predict-payload: ""
 
@@ -78,6 +95,7 @@ This action deploys a [Truss](https://github.com/basetenlabs/truss) model to [Ba
 ## Scenarios
 
 - [Deploy a model and promote to production](#deploy-a-model-and-promote-to-production)
+- [Deploy a chain](#deploy-a-chain)
 - [Deploy a model without cleanup](#deploy-a-model-without-cleanup)
 - [Deploy with a custom predict payload](#deploy-with-a-custom-predict-payload)
 - [Deploy to a specific environment](#deploy-to-a-specific-environment)
@@ -96,6 +114,21 @@ By default the deployment is deactivated after validation. Set `promote: true` t
     baseten-api-key: ${{ secrets.BASETEN_API_KEY }}
     promote: true
     cleanup: false
+```
+
+### Deploy a chain
+
+Deploy a Baseten chain from a Python source file. The action auto-detects chains when the path ends in `.py`.
+
+```yaml
+- uses: basetenlabs/action-truss-push@v0.1.0
+  with:
+    truss-directory: "./chains/my_chain.py"
+    baseten-api-key: ${{ secrets.BASETEN_API_KEY }}
+    model-name: "my-rag-chain"
+    promote: true
+    cleanup: false
+    predict-payload: '{"query": "What is Baseten?"}'
 ```
 
 ### Deploy a model without cleanup

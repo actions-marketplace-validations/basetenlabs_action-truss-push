@@ -1,5 +1,5 @@
 name: "Truss Push"
-description: "Deploy and validate a Truss model on Baseten"
+description: "Deploy and validate a Truss model or chain on Baseten"
 
 branding:
   icon: "upload-cloud"
@@ -7,13 +7,13 @@ branding:
 
 inputs:
   truss-directory:
-    description: "Path to directory containing config.yaml (e.g., llm/gpt-oss-20b/latency, video/model-name/quality)"
+    description: "Path to a model directory containing config.yaml, or a .py file for chain deployments"
     required: true
   baseten-api-key:
     description: "Baseten API key (from secrets)"
     required: true
   model-name:
-    description: "Override the model name (maps to truss push --model-name)"
+    description: "Override the model/chain name (maps to truss push --model-name for models, or chain_name for chains)"
     required: false
     default: ""
   promote:
@@ -45,7 +45,7 @@ inputs:
     required: false
     default: "true"
   predict-payload:
-    description: "JSON override for predict payload. If empty, reads model_metadata.example_model_input from config.yaml"
+    description: "JSON predict payload. For models, defaults to model_metadata.example_model_input from config.yaml. For chains, must be provided explicitly."
     required: false
     default: ""
   deploy-timeout-minutes:
@@ -62,10 +62,13 @@ outputs:
     description: "Baseten deployment ID"
     value: ${{ steps.deploy.outputs.deployment-id }}
   model-id:
-    description: "Baseten model ID"
+    description: "Baseten model ID (models only)"
     value: ${{ steps.deploy.outputs.model-id }}
+  chain-id:
+    description: "Baseten chain ID (chains only)"
+    value: ${{ steps.deploy.outputs.chain-id }}
   model-name:
-    description: "Model name from config.yaml"
+    description: "Model or chain name"
     value: ${{ steps.deploy.outputs.model-name }}
   deploy-time-seconds:
     description: "Wall-clock seconds from push to active"
